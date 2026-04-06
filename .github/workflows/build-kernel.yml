@@ -196,25 +196,28 @@ jobs:
             echo "HAVE_SOURCE_BOOT_IMAGE=true" >> $GITHUB_ENV
         fi
 
-    - name: Setup KernelSU (Force Injection)
-      if: env.ENABLE_KERNELSU == 'true'
+    - name: Setup KernelSU (Integrated Fix)
       run: |
         cd $GITHUB_WORKSPACE/kernel_workspace/android-kernel
-        # 1. Kill any existing traces
-        rm -rf drivers/kernelsu drivers/KernelSU out
         
-        # 2. Clone to a temp directory
-        git clone https://github.com/tiann/KernelSU ksu_tmp --depth=1
-        
-        # 3. Create the EXACT folder named in your drivers/Kconfig
+        # 1. Always ensure the directory exists to prevent Kconfig errors
         mkdir -p drivers/kernelsu
         
-        # 4. Move the driver files (from the /kernel subfolder of the repo)
-        cp -r ksu_tmp/kernel/* drivers/kernelsu/
-        rm -rf ksu_tmp
-        
-        # 5. Verify the file is physically there
-        ls -l drivers/kernelsu/Kconfig
+        # 2. Only pull source if ENABLE_KERNELSU is true
+        if [ "${{ env.ENABLE_KERNELSU }}" = "true" ]; then
+            echo "ENABLE_KERNELSU is true, injecting source..."
+            rm -rf drivers/kernelsu
+            git clone https://github.com/tiann/KernelSU ksu_tmp --depth=1
+            mkdir -p drivers/kernelsu
+            cp -r ksu_tmp/kernel/* drivers/kernelsu/
+            rm -rf ksu_tmp
+        else
+            # If false, we put a dummy Kconfig so the build doesn't crash
+            echo 'config KSU' > drivers/kernelsu/Kconfig
+            echo 'bool "Dummy KSU"' >> drivers/kernelsu/Kconfig
+            echo 'default n' >> drivers/kernelsu/Kconfig
+            echo 'obj-y +=' > drivers/kernelsu/Makefile
+        fi
 
     - name: Setup Configuration for Kernel
       run: |
