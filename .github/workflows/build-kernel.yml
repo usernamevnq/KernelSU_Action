@@ -200,8 +200,26 @@ jobs:
       if: env.ENABLE_KERNELSU == 'true'
       run: |
         cd $GITHUB_WORKSPACE/kernel_workspace/android-kernel
+        # 1. Run the official setup script
         curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s ${{ env.KERNELSU_TAG }}
-        KSU_VERSION=$(cd KernelSU && expr $(/usr/bin/git rev-list --count HEAD) + 10200)
+        
+        # 2. FORCE FIX: Ensure the directory matches the 'drivers/Kconfig' expectation
+        # If the script created 'KernelSU', rename it to 'kernelsu'
+        if [ -d "drivers/KernelSU" ]; then
+            mv drivers/KernelSU drivers/kernelsu
+        fi
+        
+        # 3. Manual backup check: if drivers/kernelsu is still missing, clone it directly
+        if [ ! -f "drivers/kernelsu/Kconfig" ]; then
+            rm -rf drivers/kernelsu
+            git clone https://github.com/tiann/KernelSU drivers/ksu_tmp
+            mkdir -p drivers/kernelsu
+            cp -r drivers/ksu_tmp/kernel/* drivers/kernelsu/
+            rm -rf drivers/ksu_tmp
+        fi
+
+        # 4. Export version for upload name
+        KSU_VERSION=$(cd drivers/kernelsu && expr $(/usr/bin/git rev-list --count HEAD) + 10200)
         echo "UPLOADNAME=-KernelSU_$KSU_VERSION" >> $GITHUB_ENV
 
     - name: Setup Configuration for Kernel
