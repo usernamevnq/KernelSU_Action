@@ -265,12 +265,17 @@ jobs:
       run: |
         cd $GITHUB_WORKSPACE/kernel_workspace/android-kernel
         
-        # 1. Set up Paths to include Clang and BOTH GCC toolchains
+        # 1. Setup Paths
         export PATH=$GITHUB_WORKSPACE/kernel_workspace/clang-aosp/bin:$GITHUB_WORKSPACE/kernel_workspace/gcc-64/bin:$GITHUB_WORKSPACE/kernel_workspace/gcc-32/bin:$PATH
         
-        # 2. Define the build command with Cross-Compilation fixes
-        # We add 'KCFLAGS' to disable the specific Werror causing the cgroup crash
-        # We add 'LLVM=1' and 'LLVM_IAS=1' to force the use of Clang's internal tools
+        # 2. Fix Git Revision errors for Shallow Clones
+        # This prevents 'scripts/setlocalversion' from crashing
+        export KBUILD_BUILD_VERSION=1
+        export KBUILD_BUILD_USER=n4k3r0
+        export KBUILD_BUILD_HOST=Github-Actions
+        export LOCALVERSION="" 
+
+        # 3. Define the Build Command
         MAKE_CMD=(
           make -j$(nproc --all) O=out 
           ARCH=${{ env.ARCH }} 
@@ -281,15 +286,10 @@ jobs:
           KCFLAGS="-Wno-error -Wno-gnu-variable-sized-type-not-at-end"
         )
 
-        # 3. Initialize fresh 'out' directory
+        # 4. Run Build
         mkdir -p out
-        
-        # 4. Run Configuration
         "${MAKE_CMD[@]}" ${{ env.KERNEL_CONFIG }}
-        
-        # 5. Run Final Compilation
         "${MAKE_CMD[@]}"
-
     - name: Check a kernel output files
       run: |
        cd $GITHUB_WORKSPACE/kernel_workspace
