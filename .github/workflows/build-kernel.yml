@@ -196,28 +196,32 @@ jobs:
             echo "HAVE_SOURCE_BOOT_IMAGE=true" >> $GITHUB_ENV
         fi
 
-    - name: Setup KernelSU (Integrated Fix)
+    - name: Setup KernelSU (Force Clean Injection)
       run: |
         cd $GITHUB_WORKSPACE/kernel_workspace/android-kernel
         
-        # 1. Always ensure the directory exists to prevent Kconfig errors
+        # 1. Force remove whatever is currently at drivers/kernelsu (file, link, or folder)
+        rm -rf drivers/kernelsu
+        
+        # 2. Now create the fresh directory
         mkdir -p drivers/kernelsu
         
-        # 2. Only pull source if ENABLE_KERNELSU is true
+        # 3. Pull source if ENABLE_KERNELSU is true
         if [ "${{ env.ENABLE_KERNELSU }}" = "true" ]; then
             echo "ENABLE_KERNELSU is true, injecting source..."
-            rm -rf drivers/kernelsu
             git clone https://github.com/tiann/KernelSU ksu_tmp --depth=1
-            mkdir -p drivers/kernelsu
             cp -r ksu_tmp/kernel/* drivers/kernelsu/
             rm -rf ksu_tmp
         else
-            # If false, we put a dummy Kconfig so the build doesn't crash
+            # Dummy Kconfig to satisfy redbull_defconfig if KSU is disabled
             echo 'config KSU' > drivers/kernelsu/Kconfig
             echo 'bool "Dummy KSU"' >> drivers/kernelsu/Kconfig
             echo 'default n' >> drivers/kernelsu/Kconfig
             echo 'obj-y +=' > drivers/kernelsu/Makefile
         fi
+        
+        # 4. Final verification for the logs
+        ls -l drivers/kernelsu/Kconfig
 
     - name: Setup Configuration for Kernel
       run: |
