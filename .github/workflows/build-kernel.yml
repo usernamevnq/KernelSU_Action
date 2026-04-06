@@ -265,22 +265,23 @@ jobs:
       run: |
         cd $GITHUB_WORKSPACE/kernel_workspace/android-kernel
         
-        # 1. FIX: Link techpack to arch/arm64 to solve the 'camera/lito-camera.dtsi' error
-        # We link the entire techpack directory so the DTS compiler finds the includes
-        ln -s ../../techpack/camera/config/arch/arm64/boot/dts/google/camera arch/arm64/boot/dts/google/camera || true
-        ln -s ../../techpack/display/config/arch/arm64/boot/dts/google/display arch/arm64/boot/dts/google/display || true
-        ln -s ../../techpack/video/config/arch/arm64/boot/dts/google/video arch/arm64/boot/dts/google/video || true
+        # 1. FIX: Symlink Techpacks to the DTS directory
+        # This solves the 'camera/lito-camera.dtsi' not found error
+        mkdir -p arch/arm64/boot/dts/google
+        ln -s ../../../../techpack/camera/config/arch/arm64/boot/dts/google/camera arch/arm64/boot/dts/google/camera || true
+        ln -s ../../../../techpack/display/config/arch/arm64/boot/dts/google/display arch/arm64/boot/dts/google/display || true
+        ln -s ../../../../techpack/video/config/arch/arm64/boot/dts/google/video arch/arm64/boot/dts/google/video || true
 
-        # 2. Setup Toolchain Paths
+        # 2. Setup Toolchain Paths (Ensures AOSP GCC and Clang are prioritized)
         export PATH=$GITHUB_WORKSPACE/kernel_workspace/clang-aosp/bin:$GITHUB_WORKSPACE/kernel_workspace/gcc-64/bin:$GITHUB_WORKSPACE/kernel_workspace/gcc-32/bin:$PATH
         
-        # 3. Fix Git Revision/Shallow Clone errors
+        # 3. Fix Git Revision/Shallow Clone errors (Suppresses 'ambiguous argument' logs)
         export KBUILD_BUILD_VERSION=1
         export KBUILD_BUILD_USER=n4k3r0
         export KBUILD_BUILD_HOST=Github-Actions
 
         # 4. Define Build Command
-        # Added -Wno-error to bypass the cgroup-defs strictness
+        # Added KCFLAGS to bypass the 'cgroup-defs' error we saw earlier
         MAKE_CMD=(
           make -j$(nproc --all) O=out 
           ARCH=${{ env.ARCH }} 
