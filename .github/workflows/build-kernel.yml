@@ -265,17 +265,22 @@ jobs:
       run: |
         cd $GITHUB_WORKSPACE/kernel_workspace/android-kernel
         
-        # 1. Setup Paths
+        # 1. FIX: Link techpack to arch/arm64 to solve the 'camera/lito-camera.dtsi' error
+        # We link the entire techpack directory so the DTS compiler finds the includes
+        ln -s ../../techpack/camera/config/arch/arm64/boot/dts/google/camera arch/arm64/boot/dts/google/camera || true
+        ln -s ../../techpack/display/config/arch/arm64/boot/dts/google/display arch/arm64/boot/dts/google/display || true
+        ln -s ../../techpack/video/config/arch/arm64/boot/dts/google/video arch/arm64/boot/dts/google/video || true
+
+        # 2. Setup Toolchain Paths
         export PATH=$GITHUB_WORKSPACE/kernel_workspace/clang-aosp/bin:$GITHUB_WORKSPACE/kernel_workspace/gcc-64/bin:$GITHUB_WORKSPACE/kernel_workspace/gcc-32/bin:$PATH
         
-        # 2. Fix Git Revision errors for Shallow Clones
-        # This prevents 'scripts/setlocalversion' from crashing
+        # 3. Fix Git Revision/Shallow Clone errors
         export KBUILD_BUILD_VERSION=1
         export KBUILD_BUILD_USER=n4k3r0
         export KBUILD_BUILD_HOST=Github-Actions
-        export LOCALVERSION="" 
 
-        # 3. Define the Build Command
+        # 4. Define Build Command
+        # Added -Wno-error to bypass the cgroup-defs strictness
         MAKE_CMD=(
           make -j$(nproc --all) O=out 
           ARCH=${{ env.ARCH }} 
@@ -286,7 +291,7 @@ jobs:
           KCFLAGS="-Wno-error -Wno-gnu-variable-sized-type-not-at-end"
         )
 
-        # 4. Run Build
+        # 5. Build Process
         mkdir -p out
         "${MAKE_CMD[@]}" ${{ env.KERNEL_CONFIG }}
         "${MAKE_CMD[@]}"
