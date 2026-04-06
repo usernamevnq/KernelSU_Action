@@ -196,35 +196,34 @@ jobs:
             echo "HAVE_SOURCE_BOOT_IMAGE=true" >> $GITHUB_ENV
         fi
 
-    - name: Setup KernelSU
+    - name: Setup KernelSU (Manual Injection)
       if: env.ENABLE_KERNELSU == 'true'
       run: |
         cd $GITHUB_WORKSPACE/kernel_workspace/android-kernel
         
-        # 1. Download the setup script and run it
-        curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s ${{ env.KERNELSU_TAG }}
+        # 1. Completely remove any existing kernelsu folders (case-insensitive check)
+        rm -rf drivers/KernelSU drivers/kernelsu
         
-        # 2. Rename to lowercase 'kernelsu' to match drivers/Kconfig expectation
-        if [ -d "drivers/KernelSU" ]; then
-            mv drivers/KernelSU drivers/kernelsu
-        fi
+        # 2. Clone KernelSU to a temporary spot
+        git clone https://github.com/tiann/KernelSU ksu_tmp --depth=1
         
-        # 3. Final safety check: if the folder is still missing, clone it manually
-        if [ ! -f "drivers/kernelsu/Kconfig" ]; then
-            echo "Standard setup failed, performing manual injection..."
-            rm -rf drivers/kernelsu
-            git clone https://github.com/tiann/KernelSU ksu_tmp
-            mkdir -p drivers/kernelsu
-            cp -r ksu_tmp/kernel/* drivers/kernelsu/
-            rm -rf ksu_tmp
+        # 3. Create the EXACT directory requested by your Kconfig
+        mkdir -p drivers/kernelsu
+        
+        # 4. Copy ONLY the kernel driver files into that folder
+        cp -r ksu_tmp/kernel/* drivers/kernelsu/
+        
+        # 5. Clean up the temp folder
+        rm -rf ksu_tmp
+        
+        # 6. Verify the file exists for the build logs
+        if [ -f "drivers/kernelsu/Kconfig" ]; then
+            echo "SUCCESS: KernelSU injected into drivers/kernelsu/"
+            ls -l drivers/kernelsu/Kconfig
+        else
+            echo "ERROR: Injection failed!"
+            exit 1
         fi
-
-        # 4. Verify for the logs
-        ls -l drivers/kernelsu/Kconfig
-
-        # 4. Export version for upload name
-        KSU_VERSION=$(cd drivers/kernelsu && expr $(/usr/bin/git rev-list --count HEAD) + 10200)
-        echo "UPLOADNAME=-KernelSU_$KSU_VERSION" >> $GITHUB_ENV
 
     - name: Setup Configuration for Kernel
       run: |
