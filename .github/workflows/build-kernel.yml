@@ -95,7 +95,7 @@ jobs:
       run: |
         cd $GITHUB_WORKSPACE/kernel_workspace
         # Using the standard HTTPS public link
-        git clone https://github.com/LineageOS/android_prebuilts_clang_kernel_linux-x86_clang-r450784e.git --depth 1 clang-aosp
+        git clone https://github.com/LineageOS/android_prebuilts_clang_kernel_linux-x86_clang-r416183b --depth 1 clang-aosp
     - name: Download Custom-Clang
       if: env.USE_CUSTOM_CLANG == 'true'
       run: |
