@@ -201,29 +201,28 @@ jobs:
       run: |
         cd $GITHUB_WORKSPACE/kernel_workspace/android-kernel
         
-        # 1. Completely remove any existing kernelsu folders (case-insensitive check)
-        rm -rf drivers/KernelSU drivers/kernelsu
+        # 1. Clean up any existing broken folders
+        rm -rf drivers/kernelsu drivers/KernelSU
         
-        # 2. Clone KernelSU to a temporary spot
+        # 2. Clone KernelSU to a temporary location
         git clone https://github.com/tiann/KernelSU ksu_tmp --depth=1
         
-        # 3. Create the EXACT directory requested by your Kconfig
+        # 3. Create the lowercase directory in BOTH source and out
         mkdir -p drivers/kernelsu
+        mkdir -p out/drivers/kernelsu
         
-        # 4. Copy ONLY the kernel driver files into that folder
+        # 4. Copy the actual driver files (from the /kernel subfolder)
         cp -r ksu_tmp/kernel/* drivers/kernelsu/
+        cp -r ksu_tmp/kernel/* out/drivers/kernelsu/
         
-        # 5. Clean up the temp folder
+        # 5. Clean up
         rm -rf ksu_tmp
         
-        # 6. Verify the file exists for the build logs
-        if [ -f "drivers/kernelsu/Kconfig" ]; then
-            echo "SUCCESS: KernelSU injected into drivers/kernelsu/"
-            ls -l drivers/kernelsu/Kconfig
-        else
-            echo "ERROR: Injection failed!"
-            exit 1
-        fi
+        # 6. Verify for the logs
+        echo "Checking source path:"
+        ls -l drivers/kernelsu/Kconfig
+        echo "Checking out path:"
+        ls -l out/drivers/kernelsu/Kconfig || echo "Out path not created yet"
 
     - name: Setup Configuration for Kernel
       run: |
